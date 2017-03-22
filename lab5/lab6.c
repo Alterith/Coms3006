@@ -44,7 +44,7 @@ float materials[][13] = {
 	{ /* "cyan rubber" */   0.0f, 0.05f, 0.05f, 1.0f, 0.4f, 0.5f, 0.5f, 1.0f, 0.04f, 0.7f, 0.7f, 1.0f, .078125f*128 },//15
 	{ /* "green rubber" */   0.0f, 0.05f, 0.0f, 1.0f, 0.4f, 0.5f, 0.4f, 1.0f, 0.04f, 0.7f, 0.04f, 1.0f, .078125f*128 },//16
 	{ /* "red rubber" */   0.05f, 0.0f, 0.0f, 1.0f, 0.5f, 0.4f, 0.4f, 1.0f, 0.7f, 0.04f, 0.04f, 1.0f, .078125f*128 },//17
-	{ /* "pearl plastic" */   0.25f, 0.20725f, 0.20725f, 1.0f, 1.0f, 0.8f, 0.8f, 1.0f, 0.3f, 0.3f, 0.3f, 1.0f, .25f*128 },//18
+	{ /* "pearl plastic" */   0.25f, 0.20725f, 0.20725f, 1.0f, 1.0f, 0.8f, 0.8f, 1.0f, 0.3f, 0.3f, 0.3f, 1.0f, 0.01*128 },//18
 };
 
 
@@ -54,43 +54,35 @@ float materials[][13] = {
  * The display method is called when the panel needs to be drawn.
  * Here, it draws a stage and some objects on the stage.
  */
+
+ //keep track of changes in mouse position
  int deltaX = 0;
  int deltaY = 0;
 
+// draw polyhedron from polyhedron class
  void drawPolyhedron(Polyhedron p){
-	 //printf("%s\n", "reached before");
 			int normalIdx = 0;
 			int len = p.totalNumFaceVertices;
-			//printf("Face vertices %d\n", len);
 			size_t position = 0;
 			//loop through face array
-			//printf("%d\n", len);
 			for (size_t i = 0; i < len; i++) {
-				//printf("%lu\n",i );
 				//printf("%s\n","reached inside" );
 				//when a -1 is reached proceed
-				//printf("%d\n", p.faces[i]);
 				if (p.faces[i] == -1) {
-					//printf("%s\n", "read -1");
 					// draw vertex
 					glPushMatrix();
-					//printf("%s\n", "pushed matrix");
-					glTranslated(5, 1,2);
 					glBegin(GL_TRIANGLE_FAN);
-					//printf("%s\n", "began triangle fan");
+					//if a colour face exists use it else ignore
 					if(p.faceColors){
 						glColor3d(p.faceColors[3*normalIdx], p.faceColors[3*normalIdx+1], p.faceColors[3*normalIdx+2]);
 					}
+					//initialize normal for face
 					glNormal3d(-p.normals[3*normalIdx], -p.normals[3*normalIdx + 1], -p.normals[3*normalIdx + 2]);
 					//printf("%s\n", "coloured faces");
 					for (size_t j = 0; j < (i-position); j++) {
-							//printf("%s %lu\n","drawing" , (i-position));
+							//draw vertex
 							 glVertex3f(p.vertices[3*p.faces[j+position]], p.vertices[3*p.faces[j+position]+1], p.vertices[3*p.faces[j+position]+2]);
-							 //printf("coordinates for %lu is (%lf,%lf,%lf)\n",(j+position), p.vertices[3*p.faces[j+position]], p.vertices[3*p.faces[j+position]+1], p.vertices[3*p.faces[j+position]+2]);
-							 //glVertex3dv(p.vertices[3*p.faces[j+position]]);
 					}
-					//printf("%s\n","reached normals");
-					//printf("Normal coords: (%lf,%lf,%lf)\n",p.normals[3*normalIdx],p.normals[3*normalIdx+1],p.normals[3*normalIdx+2] );
 					glEnd();
 					glPopMatrix();
 					//initialize position to next element after -1
@@ -112,7 +104,10 @@ void display() {
 		//rotate depending on x and y changes
 		glPushMatrix();
 		//printf("%s%d\n", "The rotation degree is " , (deltaX*3 % 360));
+
+		//enable rotation of the stage
 		glRotatef((deltaX*0.1), 0, 1, 0);
+		glRotatef((deltaY*0.1), 1, 0, 0);
 
     float gray[] = { 0.6f, 0.6f, 0.6f, 1 };
     float zero[] = { 0, 0, 0, 1 };
@@ -121,73 +116,161 @@ void display() {
     glPushMatrix();
     	glTranslatef(0,-1.5,0); // Move top of stage down to y = 0
     	glScalef(1, 0.05, 1); // Stage will be one unit thick,
-			//glRotated(30, 0, 1, 0);
     	glutSolidCube(20);
     glPopMatrix();
 
+		//call the function createPolyhedra to create the polyhedron'
 		createPolyhedra();
-		glMaterialfv( GL_FRONT_AND_BACK, GL_AMBIENT, materials[5] );
-		glMaterialfv( GL_FRONT_AND_BACK, GL_DIFFUSE, &materials[5][4] );
-		glMaterialfv( GL_FRONT_AND_BACK, GL_SPECULAR, &materials[5][8] );
-		glMaterialf( GL_FRONT_AND_BACK, GL_SHININESS, materials[5][12] );
-		drawPolyhedron(dodecahedron);
 
+		//draw a house at center
 		glPushMatrix();
-		glTranslated(-10, 2, -1);
+		glScaled(1.1, 1.3, 1.1);
+		drawPolyhedron(house);
+		glPopMatrix();
+
+		//use the drawPolyhedron function to draw a truncatedRhombicDodecahedron and apply a material to it then translate it to a corner
+		glPushMatrix();
+		glTranslated(9, 0, 9);//translate to corner
+		glScaled(0.75, 0.75, 0.75);// scale down
+		glMaterialfv( GL_FRONT_AND_BACK, GL_AMBIENT, materials[1] );
+		glMaterialfv( GL_FRONT_AND_BACK, GL_DIFFUSE, &materials[1][4] );
+		glMaterialfv( GL_FRONT_AND_BACK, GL_SPECULAR, &materials[1][8] );
+		glMaterialf( GL_FRONT_AND_BACK, GL_SHININESS, materials[1][12] );
+		drawPolyhedron(truncatedRhombicDodecahedron);//draw
+		glPopMatrix();
+
+		//use the drawPolyhedron function to draw an incorrectly spelled(XP) soccerball and apply a material to it then translate it to a corner
+		glPushMatrix();
+		glTranslated(-9, 0, 9);//translat eto corner
 		glMaterialfv( GL_FRONT_AND_BACK, GL_AMBIENT, materials[2] );
 		glMaterialfv( GL_FRONT_AND_BACK, GL_DIFFUSE, &materials[2][4] );
 		glMaterialfv( GL_FRONT_AND_BACK, GL_SPECULAR, &materials[2][8] );
 		glMaterialf( GL_FRONT_AND_BACK, GL_SHININESS, materials[2][12] );
-		drawPolyhedron(socerBall);
+		drawPolyhedron(socerBall);//draw
 		glPopMatrix();
 
+		//use the drawPolyhedron function to draw a truncatedIcosahedron and apply a material to it then translate it to a corner
+		glPushMatrix();
+		glTranslated(-9, 0, -9);//translate to corner
+		glMaterialfv( GL_FRONT_AND_BACK, GL_AMBIENT, materials[3] );
+		glMaterialfv( GL_FRONT_AND_BACK, GL_DIFFUSE, &materials[3][4] );
+		glMaterialfv( GL_FRONT_AND_BACK, GL_SPECULAR, &materials[3][8] );
+		glMaterialf( GL_FRONT_AND_BACK, GL_SHININESS, materials[3][12] );
+		drawPolyhedron(truncatedIcosahedron);//draw
+		glPopMatrix();
+
+		//use the drawPolyhedron function to draw a stellatedOctahedron and apply a material to it then translate it to a corner
+		glPushMatrix();
+		glTranslated(9, -0.35, -9);//translate to corner
+		glMaterialfv( GL_FRONT_AND_BACK, GL_AMBIENT, materials[4] );
+		glMaterialfv( GL_FRONT_AND_BACK, GL_DIFFUSE, &materials[4][4] );
+		glMaterialfv( GL_FRONT_AND_BACK, GL_SPECULAR, &materials[4][8] );
+		glMaterialf( GL_FRONT_AND_BACK, GL_SHININESS, materials[4][12] );
+		drawPolyhedron(stellatedOctahedron);//draw
+		glPopMatrix();
+
+
+		//draw a teapot shrink it and place it upon the table
     glPushMatrix();
 				glMaterialfv( GL_FRONT_AND_BACK, GL_AMBIENT, materials[3] );
 				glMaterialfv( GL_FRONT_AND_BACK, GL_DIFFUSE, &materials[3][4] );
 				glMaterialfv( GL_FRONT_AND_BACK, GL_SPECULAR, &materials[3][8] );
 				glMaterialf( GL_FRONT_AND_BACK, GL_SHININESS, materials[3][12] );
-        glTranslatef(0,0.399,0); // translate so base of pot is on surface of stage
+        glTranslatef(4,0,1.5); // translate so base of pot is on surface of stage
+				glScaled(0.2, 0.2, 0.2);
         glutSolidTeapot(2); // draw a solid teapot of size 2
     glPopMatrix();
 
-		glPushMatrix();
-			glMaterialfv( GL_FRONT_AND_BACK, GL_AMBIENT, materials[4] );
-			glMaterialfv( GL_FRONT_AND_BACK, GL_DIFFUSE, &materials[4][4] );
-			glMaterialfv( GL_FRONT_AND_BACK, GL_SPECULAR, &materials[4][8] );
-			glMaterialf( GL_FRONT_AND_BACK, GL_SHININESS, materials[4][12] );
-			glTranslatef(-8, -0.251, 0);
-			glRotated(90, 0, 1, 0);
-			glutSolidRhombicDodecahedron();
-		glPopMatrix();
 
-		glPushMatrix();
-			glDisable(GL_LIGHTING);
-			glTranslatef(6, -0.1,-5);
-			glutWireIcosahedron();
-			glEnable(GL_LIGHTING);
-		glPopMatrix();
-
-		glPushMatrix();
-			glMaterialfv( GL_FRONT_AND_BACK, GL_AMBIENT, materials[18] );
-			glMaterialfv( GL_FRONT_AND_BACK, GL_DIFFUSE, &materials[18][4] );
-			glMaterialfv( GL_FRONT_AND_BACK, GL_SPECULAR, &materials[18][8] );
-			glMaterialf( GL_FRONT_AND_BACK, GL_SHININESS, materials[18][12] );
-			glTranslatef(4, -0.3, 0);
-			glRotated(90, 1, 0, 0);
-			glutSolidCone(1, 1.5, 32, 32);
-		glPopMatrix();
-
+		//draw another glut object and place it at a corner
 		glPushMatrix();
 			glMaterialfv( GL_FRONT_AND_BACK, GL_AMBIENT, materials[13] );
 			glMaterialfv( GL_FRONT_AND_BACK, GL_DIFFUSE, &materials[13][4] );
 			glMaterialfv( GL_FRONT_AND_BACK, GL_SPECULAR, &materials[13][8] );
 			glMaterialf( GL_FRONT_AND_BACK, GL_SHININESS, materials[13][12] );
-			glTranslatef(-6, 1, -4);
+			glTranslatef(-9, -0.35, 0);
+			glRotated(90, 0, 1, 0);
+			glutSolidRhombicDodecahedron();
+		glPopMatrix();
+
+
+		//draw a wireframe icosahedron and plave at front of stage diable lighting for wireframe objects
+		glPushMatrix();
+			glDisable(GL_LIGHTING);
+			glTranslatef(0, -0.1,9);
+			glutWireIcosahedron();
+			glEnable(GL_LIGHTING);
+		glPopMatrix();
+
+		//draw a cone usling glut and sink into stage to make emulated table obsidian material
+		glPushMatrix();
+			glMaterialfv( GL_FRONT_AND_BACK, GL_AMBIENT, materials[2] );
+			glMaterialfv( GL_FRONT_AND_BACK, GL_DIFFUSE, &materials[2][4] );
+			glMaterialfv( GL_FRONT_AND_BACK, GL_SPECULAR, &materials[2][8] );
+			glMaterialf( GL_FRONT_AND_BACK, GL_SHININESS, materials[2][12] );
+			glTranslatef(4, -0.3, 1.5);
+			glRotated(90, 1, 0, 0);
+			glutSolidCone(1, 1.5, 32, 32);
+		glPopMatrix();
+
+
+		//draw a simple glut cylinder material chrome
+		glPushMatrix();
+			glMaterialfv( GL_FRONT_AND_BACK, GL_AMBIENT, materials[8] );
+			glMaterialfv( GL_FRONT_AND_BACK, GL_DIFFUSE, &materials[8][4] );
+			glMaterialfv( GL_FRONT_AND_BACK, GL_SPECULAR, &materials[8][8] );
+			glMaterialf( GL_FRONT_AND_BACK, GL_SHININESS, materials[8][12] );
+			glTranslatef(9, 1, 0);
 			glRotated(90, 1, 0, 0);
 			glutSolidCylinder(1, 2, 32, 32);
 		glPopMatrix();
+
+		//draw a window colour chrome
+		glPushMatrix();
+			glMaterialfv( GL_FRONT_AND_BACK, GL_AMBIENT, materials[8] );
+			glMaterialfv( GL_FRONT_AND_BACK, GL_DIFFUSE, &materials[8][4] );
+			glMaterialfv( GL_FRONT_AND_BACK, GL_SPECULAR, &materials[8][8] );
+			glMaterialf( GL_FRONT_AND_BACK, GL_SHININESS, materials[8][12] );
+			glTranslatef(0, 0.75, 2.25);
+			glScaled(2.5, 0.75, 0.001);
+			glutSolidCube(1);
 		glPopMatrix();
-    // TODO draw some shapes!
+
+		//draw another window colour chrome
+		glPushMatrix();
+			glMaterialfv( GL_FRONT_AND_BACK, GL_AMBIENT, materials[8] );
+			glMaterialfv( GL_FRONT_AND_BACK, GL_DIFFUSE, &materials[8][4] );
+			glMaterialfv( GL_FRONT_AND_BACK, GL_SPECULAR, &materials[8][8] );
+			glMaterialf( GL_FRONT_AND_BACK, GL_SHININESS, materials[8][12] );
+			glTranslatef(0, 0.75, -2.25);
+			glScaled(2.5, 0.75, 0.001);
+			glutSolidCube(1);
+		glPopMatrix();
+
+		//draw a door
+		glPushMatrix();
+			glMaterialfv( GL_FRONT_AND_BACK, GL_AMBIENT, materials[2] );
+			glMaterialfv( GL_FRONT_AND_BACK, GL_DIFFUSE, &materials[2][4] );
+			glMaterialfv( GL_FRONT_AND_BACK, GL_SPECULAR, &materials[2][8] );
+			glMaterialf( GL_FRONT_AND_BACK, GL_SHININESS, materials[2][12] );
+			glTranslatef(2.25, -0.2, 0);
+			glScaled(0.001, 1.5, 0.8);
+			glutSolidCube(1);
+		glPopMatrix();
+
+		//draw door handle plastic material
+		glPushMatrix();
+			glMaterialfv( GL_FRONT_AND_BACK, GL_AMBIENT, materials[17] );
+			glMaterialfv( GL_FRONT_AND_BACK, GL_DIFFUSE, &materials[17][4] );
+			glMaterialfv( GL_FRONT_AND_BACK, GL_SPECULAR, &materials[17][8] );
+			glMaterialf( GL_FRONT_AND_BACK, GL_SHININESS, materials[17][12] );
+			glTranslatef(2.25, -0.2, 0.15);
+			glScaled(1, 1, 0.8);
+			glutSolidSphere(0.1, 8, 8);
+		glPopMatrix();
+
+
+		glPopMatrix();
 
 
     glutSwapBuffers();  // (Required for double-buffered drawing, at the end of display().)
@@ -208,17 +291,29 @@ void initGL() {
     glMatrixMode(GL_MODELVIEW);
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_NORMALIZE);
-		float col1[4] = { 0.72, 0.16, 0.26, 1};
-		float col2[4] = { 0.41, 0, 0, 1 };
-		float col3[4] = { 0.31, 0, 0, 1 };
-		float position[4] = { 0, 0, 0, 1 };
-		glLightfv(GL_LIGHT1, GL_POSITION, position);
-		glLightfv( GL_LIGHT1, GL_DIFFUSE, col1 );
-		glLightfv( GL_LIGHT1, GL_SPECULAR, col2 );
-		glLightfv( GL_LIGHT1, GL_AMBIENT, col3 );
+		float col11[4] = { 0.21, 0.43, 0.01, 1};
+		float col12[4] = { 0.21, 0, 0, 1 };
+		float col13[4] = { 0.16, 0, 0, 1 };
+		float position1[4] = { 0, 0, 0, 1 };
+		glLightfv(GL_LIGHT1, GL_POSITION, position1);
+		glLightfv( GL_LIGHT1, GL_DIFFUSE, col11 );
+		glLightfv( GL_LIGHT1, GL_SPECULAR, col12 );
+		glLightfv( GL_LIGHT1, GL_AMBIENT, col13 );
+
+		float col21[4] = { 0.31, 0.13, 0.71, 1};
+		float col22[4] = { 0.1, 0, 0.3, 1 };
+		float col23[4] = { 0.01, 0.14, 0.032, 1 };
+		float position2[4] = { 1, 1, 0, 0 };
+		glLightfv(GL_LIGHT2, GL_POSITION, position2);
+		glLightfv( GL_LIGHT2, GL_DIFFUSE, col21 );
+		glLightfv( GL_LIGHT2, GL_SPECULAR, col22 );
+		glLightfv( GL_LIGHT2, GL_AMBIENT, col23 );
+
+
     glEnable(GL_LIGHTING);
     glEnable(GL_LIGHT0);
 		glEnable(GL_LIGHT1);
+		glEnable(GL_LIGHT2);
     // TODO configure better lighting!
 }  // end initGL()
 
@@ -263,9 +358,22 @@ void mouseDragged(int x, int y) {
     if ( ! dragging )
         return;
     // TODO Do something when the mouse moves!
+		// track changes of x
 		deltaX = deltaX + (x - prevX);
-		deltaY = deltaY +(y - prevY);
-		//printf("%s%d\n", "the x change is ", deltaX);
+
+		//track changes of y limiting it between -40 and 40 change from 0 thus only tilting is applied
+		if(deltaY>=40){
+			if((y - prevY)<0){
+				deltaY = deltaY + (y - prevY);
+			}
+		}else if(deltaY <= -40){
+			if((y - prevY)>0){
+				deltaY = deltaY + (y - prevY);
+			}
+		}else{
+			deltaY = deltaY + (y - prevY);
+		}
+		printf("%s%d\n", "the x change is ", deltaY);
     glutPostRedisplay();  // make OpenGL redraw the scene
     prevX = x;
     prevY = y;
