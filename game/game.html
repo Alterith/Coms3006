@@ -1,9 +1,9 @@
 <!doctype html>
 <html lang="en">
 <head>
-	<title>Maze Game</title>
-	<meta charset="utf-8">
-	<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+    <title>Maze Game</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
     <link rel=stylesheet href="css/base.css"/>
 </head>
 <body>
@@ -14,367 +14,615 @@
 <script src="js/THREEx.KeyboardState.js"></script>
 <script src="js/THREEx.FullScreen.js"></script>
 <script src="js/THREEx.WindowResize.js"></script>
+<script src='js/threex.dynamictexture.js'></script>
 
 
 <div id="ThreeJS" style="z-index: 1; position: absolute; left:0px; top:0px"></div>
 <script>
 
 
-// standard global variables
-var container, scene, camera, renderer, controls;
-//listens for key presses
-var keyboard = new THREEx.KeyboardState();
-//clock
-var clock = new THREE.Clock();
+    // standard global variables
+    var container, scene, camera, renderer, controls;
+    //listens for key presses
+    var keyboard = new THREEx.KeyboardState();
+    //clock
+    var clock = new THREE.Clock();
 
-// custom global variables
-//previous direction for bounce
-var lastDirection;
-//if collided
-var collision;
-//player mesh
-var player;
-//array of all collidable objects
-var collidableMeshList = [];
-//if rotated
-var rotatedFlag;
+    // custom global variables
+    //where to place camera for splash
+    var splashScreen;
+    //previous direction for bounce
+    var lastDirection;
+    //if collided
+    var collision = [];
+    //player mesh
+    var player;
+    //array of all collidable objects
+    var collidableMeshList = [];
+    //if rotated
+    var rotatedFlag;
+    //clickable objects
+    var clickableMeshList = [];
+    //project to world coordinates
+    var transformCoordinates;
+    //store mouse coordinates
+    var pointerCoords = {x: 0, y: 0};
+    //2d array representing the maze
+    var maze = [
+        [1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],//1
+        [1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1],//2
+        [1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],//3
+        [1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1],//4
+        [1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1],//5
+        [1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1],//6
+        [1, 1, 1, 0, 1, 0, 0, 0, 1, 1, 1, 1, 0, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1],//7
+        [1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 0, 0, 0, 1, 1, 1, 1, 1],//8
+        [1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 1, 1],//9
+        [1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1],//10
+        [1, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1],//11
+        [1, 1, 0, 0, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1],//12
+        [1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1],//13
+        [1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1],//14
+        [1, 1, 1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 1],//15
+        [1, 0, 0, 0, 0, 0, 1, 1, 0, 1, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 1, 1, 1],//16
+        [1, 0, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1],//17
+        [1, 0, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1],//18
+        [1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1],//19
+        [1, 0, 0, 0, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1],//20
+        [1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1],//21
+        [1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1],//22
+        [1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1],//23
+        [1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1],//24
+        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]//25
+    ];
 
-//2d array representing the maze
-var maze = [
-	[1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],//1
-	[1,0,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,1,1,1,1,1,1,1],//2
-	[1,0,0,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,1,1],//3
-	[1,1,0,0,0,0,1,1,1,1,1,0,0,0,0,0,0,0,0,1,1,1,1,1,1],//4
-	[1,1,1,1,1,0,1,1,1,1,1,0,1,1,1,1,1,1,0,1,1,1,1,1,1],//5
-	[1,1,1,1,1,0,1,0,0,0,0,0,0,1,1,0,0,0,1,1,1,1,1,1,1],//6
-	[1,1,1,0,1,0,0,0,1,1,1,1,0,0,1,0,1,0,1,1,1,1,1,1,1],//7
-	[1,1,1,0,1,1,1,1,1,1,1,1,1,0,1,0,1,0,0,0,1,1,1,1,1],//8
-	[1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,1,1,1,1,1],//9
-	[1,1,0,1,1,1,1,1,1,1,0,1,1,1,1,0,1,1,1,1,1,1,1,1,1],//10
-	[1,1,0,1,0,0,0,0,0,0,0,1,1,1,1,0,1,1,1,1,1,1,1,1,1],//11
-	[1,1,0,0,0,1,1,0,1,1,1,1,1,1,1,0,0,0,0,0,0,0,1,1,1],//12
-	[1,1,1,1,1,1,1,0,0,0,0,0,0,0,1,1,1,1,1,0,0,0,1,1,1],//13
-	[1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,1,1,1,1,1,0,1,1,1],//14
-	[1,1,1,0,0,0,1,0,0,0,1,1,1,1,1,0,1,1,0,1,1,0,1,1,1],//15
-	[1,0,0,0,0,0,1,1,0,1,1,0,0,0,0,0,1,1,0,0,0,0,1,1,1],//16
-	[1,0,1,1,1,1,1,1,0,1,1,0,0,0,0,0,1,1,1,1,1,0,1,1,1],//17
-	[1,0,1,1,1,1,1,1,0,1,1,1,1,1,1,0,0,0,0,0,0,0,1,1,1],//18
-	[1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,0,1,1,1],//19
-	[1,0,0,0,1,1,0,1,1,1,0,1,1,1,1,1,1,1,0,0,0,0,1,1,1],//20
-	[1,1,1,1,1,1,0,0,0,1,0,1,0,0,0,0,1,1,0,1,1,1,1,1,1],//21
-	[1,1,1,1,1,1,1,1,0,1,1,1,0,1,1,0,1,1,1,1,1,1,1,1,1],//22
-	[1,1,1,1,1,0,0,0,0,0,0,0,0,1,1,0,0,0,0,1,1,1,1,1,1],//23
-	[1,1,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,1],//24
-	[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1]//25
-];
+    //create boulder for trap
+    var boulder;
 
-// initialization
-init();
+    //create translate and rotate variables for boulder just to change direction
+    var boulderTranslate, boulderRotate;
 
-// animation loop / game loop
-animate();
+    //timer block
+    var timerBlock;
 
-function init()
-{
-	//initialize scene
-	scene = new THREE.Scene();
+    var timeText;
 
-	//set up camera
+    var deathArray = [];
 
-	// size according to window
-	var SCREEN_WIDTH = window.innerWidth;
-	var SCREEN_HEIGHT = window.innerHeight;
-	// camera attributes
-	var VIEW_ANGLE = 45;
-	var ASPECT = SCREEN_WIDTH / SCREEN_HEIGHT;
-	var NEAR = 0.1;
-	var FAR = 750;
-	// set up camera
-	camera = new THREE.PerspectiveCamera( VIEW_ANGLE, ASPECT, NEAR, FAR);
-	var light;  // A light shining from the direction of the camera; moves with the camera.
-	light = new THREE.DirectionalLight();
-	light.position.set(0,0,1);
-	//add light to camera
-	camera.add(light);
-	// add the camera to the scene
-	scene.add(camera);
-	// the camera defaults to position (0,0,0)
-	// 	so pull it back (z = 400) and up (y = 100) and set the angle towards the scene origin
-	camera.position.set(0,150,400);
-	camera.lookAt(scene.position);
+    // initialization
+    init();
+
+    // animation loop / game loop
+    animate();
+
+    function createWorld() {
 
 
-	// initialize renderer use detector class to detect webgl compatibility if none use canvas renderer
-	if ( Detector.webgl ){
-		renderer = new THREE.WebGLRenderer( {antialias:true} );
-	}else{
-		renderer = new THREE.CanvasRenderer();
-	}
-	//set size of viewport to render to
-	renderer.setSize(SCREEN_WIDTH, SCREEN_HEIGHT);
+        // create a light
+        var light = new THREE.PointLight(0xffffff);
+        light.position.set(0, 250, 0);
+        scene.add(light);
+        var ambientLight = new THREE.AmbientLight("#1c1c1c", 0.5);
+        scene.add(ambientLight);
 
-	container = document.getElementById( 'ThreeJS' );
-	container.appendChild( renderer.domElement );
-
-	// automatically resize renderer
-	THREEx.WindowResize(renderer, camera);
-	// toggle full-screen on given key press
-	THREEx.FullScreen.bindKey({ charCode : 'm'.charCodeAt(0) });
-
-
-	//drag cursor to rotate, right click drag to pan and middle button to zoom
-	controls = new THREE.OrbitControls( camera, renderer.domElement );
+        //shadow spot light 1
+        var spotlight = new THREE.SpotLight(0xffbb99);
+        spotlight.position.set(-1250, 350, 0);
+        spotlight.shadowCameraVisible = true;
+        spotlight.shadowDarkness = 0.5;
+        spotlight.intensity = 2;
+        spotlight.castShadow = true;
+        scene.add(spotlight);
 
 
-	// create a light
-	var light = new THREE.PointLight(0xffffff);
-	light.position.set(0,250,0);
-	scene.add(light);
-	var ambientLight = new THREE.AmbientLight(0x111111);
-	scene.add(ambientLight);
+        //create player
+        var playerMaterial = new THREE.MeshBasicMaterial(
+            {
+                color: 0x336699,
+                transparent: true,
+                opacity: 0.5
+            }
+        );
+        //dims along with segments MORE SEGMENTS MEANS MORE RAYS AND LAGGIER GAME BECAUSE COLLISION
 
-	// Create an array of materials to be used in a player, one for each side
-	var playerMaterialArray = [];
-	// order to add materials: x+,x-,y+,y-,z+,z-
+        var playerGeometry = new THREE.SphereGeometry(10, 16, 16);
+        player = new THREE.Mesh(playerGeometry, playerMaterial);
+        //player.position.set(50,50,50);
+        player.position.set(-2500 + 50 + (23 * 100), 40, -2500 + 50 + (23 * 100));
+        player.castShadow = true;
+        player.receiveShadow = true;
+        scene.add(player);
 
 
 
-		playerMaterialArray.push( new THREE.MeshBasicMaterial( { color: 0x000000, transparent: true, opacity: 0.5 } ) );
-		playerMaterialArray.push( new THREE.MeshBasicMaterial( { color: 0x000000, transparent: true, opacity: 0.5 } ) );
-		playerMaterialArray.push( new THREE.MeshBasicMaterial( { color: 0x000000, transparent: true, opacity: 0.5 } ) );
-		playerMaterialArray.push( new THREE.MeshBasicMaterial( { color: 0x000000, transparent: true, opacity: 0.5 } ) );
-		playerMaterialArray.push( new THREE.MeshBasicMaterial( { color: 0x000000, transparent: true, opacity: 0.5 } ) );
-		playerMaterialArray.push( new THREE.MeshBasicMaterial( { color: 0x000000, transparent: true, opacity: 0.5 } ) );
-		var playerMaterials = new THREE.MeshFaceMaterial( playerMaterialArray );
-		//dims along with segments MORE SEGMENTS MEANS MORE RAYS AND LAGGIER GAME BECAUSE COLLISION
-		var playerGeometry = new THREE.SphereGeometry( 10, 16, 16);
-		player = new THREE.Mesh( playerGeometry, playerMaterials );
-		player.position.set(-150, 40, 50);
-		scene.add( player );
+        // create a set of coordinate axes to help orient user
+        //    specify length in pixels in each direction
+        var axes = new THREE.AxisHelper(100);
+        scene.add(axes);
 
-		// create a set of coordinate axes to help orient user
-		//    specify length in pixels in each direction
-		var axes = new THREE.AxisHelper(100);
-		scene.add( axes );
+        //boulder
+        var dirtTexture = new THREE.ImageUtils.loadTexture('images/dirt-512.jpg');
+        dirtTexture.wrapS = THREE.MirroredRepeatWrapping;
+        dirtTexture.wrapT = THREE.MirroredRepeatWrapping;
+        dirtTexture.repeat.set(5, 5);
+        var boulderMaterial = new THREE.MeshLambertMaterial(
+            {
+                colour: "#228b22",
+                shininess: 0.5,
+                map: dirtTexture
+            }
+        );
+
+        var boulderGeometry = new THREE.SphereGeometry(40, 16, 16);
+        boulder = new THREE.Mesh(boulderGeometry, boulderMaterial);
+        boulder.position.set(-2500 + 50 + (11 * 100), 40, -2500 + 50 + (3 * 100));
+        boulder.position.set(100, 40, 100);
+        deathArray.push(boulder);
+        scene.add(boulder);
+
+        //sand player model
+        var sandmanMaterial = new THREE.MeshLambertMaterial(
+            {
+                colour: "#b27300",
+                shininess: 0.5,
+                map: dirtTexture
+            }
+        );
+
+        //construct sandman player model
+        var sandManComponentGeometry = new THREE.SphereGeometry(10, 16, 16);
+        var sandmanHead = new THREE.Mesh(sandManComponentGeometry, sandmanMaterial);
+        sandmanHead.position.set(100, 40, 100);
+        //scene.add(sandmanHead);
+        var sandman = new THREE.Object3D();
+        sandman.add(sandmanHead);
+
+        //scale head for body size
+        var sandmanBody = sandmanHead.clone();
+        sandmanBody.scale.set(1.5, 1.5, 1.5);
+        sandmanBody.position.set(100, 20, 100);
+        sandman.add(sandmanBody);
+
+        //scale body for base size
+        var sandmanBase = sandmanBody.clone();
+        sandmanBase.scale.set(1.8, 1.8, 1.8);
+        sandmanBase.position.set(100, -2, 100);
+        sandman.add(sandmanBase);
+        scene.add(sandman);
+        //maze
+
+        //the basic block for our maze wall
 
 
+        // normal texture
+        var crateTexture = new THREE.ImageUtils.loadTexture('images/crate.png');
+        crateTexture.wrapS = THREE.MirroredRepeatWrapping;
+        crateTexture.wrapT = THREE.MirroredRepeatWrapping;
+        crateTexture.repeat.set(5, 5);
 
-	//maze
+        //special texture for puzzle walls
+        var dynamicTexture = new THREEx.DynamicTexture(512, 512)
+        dynamicTexture.context.font = "bolder 50px Verdana";
+        dynamicTexture.drawText('Is this working?', 32, 256, 'red')
 
-	//the basic block for our maze wall
+        var testMaze = new THREE.Mesh(
+            new THREE.CubeGeometry(100, 150, 100, 4, 4, 4),
+            //make the material reflective with a specular component
+            new THREE.MeshPhongMaterial({
+                color: 0xffcc99,
+                specular: 0xffcc99,
+                shininess: 2,
+                shading: THREE.FlatShading,
+                map: crateTexture,
+                side: THREE.DoubleSide
+            })
+        );
+
+        var mazePuzzle = new THREE.Mesh(
+            new THREE.CubeGeometry(100, 150, 100, 4, 4, 4),
+            //make the material reflective with a specular component
+            new THREE.MeshPhongMaterial({
+                color: 0xffffff,
+                specular: 0xffffff,
+                shininess: 2,
+                shading: THREE.FlatShading,
+                map: dynamicTexture.texture,
+                side: THREE.DoubleSide
+            })
+        );
+
+        //initialize time to play game
+        timeText = 100;
+        //dynamic texture basically creates an html canvas element and populates relevent parameters finally mapping it as a teture
+        var dynamicTexture1 = new THREEx.DynamicTexture(512, 512)
+        dynamicTexture1.context.font = "bolder 50px Verdana";
+        dynamicTexture1.drawText(timeText, 32, 256, 'red')
+        //add timer for some constraint
+        var timerGeometry = new THREE.PlaneGeometry(10,5,1,1);
+        var timerMaterial = new THREE.MeshBasicMaterial({
+            map: dynamicTexture1.texture,
+            side: THREE.FrontSide
+        }
+        );
+
+        timerBlock = new THREE.Mesh(timerGeometry,timerMaterial);
+        timerBlock.position.set(-180, 55, 150);
+        scene.add(timerBlock);
+
+        for (var i = 0; i < maze.length; i++) {
+            for (var j = 0; j < maze[i].length; j++) {
+                if (maze[i][j] == 1) {
+                    var test2 = testMaze.clone();
+                    test2.position.set(-2500 + 50 + (j * 100), 75, -2500 + 50 + (i * 100));
+                    test2.castShadow = true;
+                    test2.recieveShadow = true;
+                    collidableMeshList.push(test2);
+                    scene.add(test2);
+                } else if (maze[i][j] == 2) {
+                    var test2 = mazePuzzle.clone();
+                    test2.position.set(-2500 + 50 + (j * 100), 75, -2500 + 50 + (i * 100));
+                    collidableMeshList.push(test2);
+                    clickableMeshList.push(test2);
+                    test2.castShadow = true;
+                    test2.recieveShadow = true;
+                    scene.add(test2);
+                }
+            }
+        }
 
 
+        //dirt stage
 
 
-	var crateTexture = new THREE.ImageUtils.loadTexture( 'images/crate.gif' );
-	crateTexture.wrapS = THREE.MirroredRepeatWrapping;
-	crateTexture.wrapT = THREE.MirroredRepeatWrapping;
-	crateTexture.repeat.set( 70, 70);
+        // render on both sides as we are on plane
+        var dirtMaterial = new THREE.MeshPhongMaterial(
+            {
+                map: dirtTexture,
+                color: 0xFFBB99,
+                specular: 0xFFBB99,
+                shininess: 2,
+                shading: THREE.FlatShading,
+                side: THREE.DoubleSide
+            });
+        //plane for floor
+        var dirtGeometry = new THREE.PlaneGeometry(2500, 2500, 10, 10);
+        var dirt = new THREE.Mesh(dirtGeometry, dirtMaterial);
+        dirt.position.y = -1;
+        //rotate else vertical
+        dirt.position.x = -1250;
+        dirt.position.z = -1250;
+        dirt.rotation.x = Math.PI / 2;
+        dirt.recieveShadow = true;
+        scene.add(dirt);
 
-	var testMaze = new THREE.Mesh(
-		new THREE.CubeGeometry(100,150,100,4,4,4),
-		//make the material reflective with a specular component
-		new THREE.MeshPhongMaterial({
-            color: 0x66BBFF,
-            specular: 0x222222,
-            shininess: 16,
-            shading: THREE.FlatShading,
-						map: crateTexture,
-						side: THREE.DoubleSide
-        })
-	);
+        //construct cube map
 
+        var prefix = "images/dawnmountain-";
+        var faces = ["xpos", "xneg", "ypos", "yneg", "zpos", "zneg"];
+        var type = ".png";
+        var cubeMapGeometry = new THREE.CubeGeometry(5000, 5000, 5000);
 
-	for(var i = 0; i < maze.length; i++) {
-    for(var j = 0; j < maze[i].length; j++) {
-			if(maze[i][j] == 1){
-					var test2 = testMaze.clone();
-					test2.position.set(-2500+50+(j*100),75,-2500+50+(i*100));
-					collidableMeshList.push(test2);
-					scene.add(test2);
-				}
+        var cubeMaterialArray = [];
+        for (var i = 0; i < 6; i++)
+            cubeMaterialArray.push(new THREE.MeshBasicMaterial({
+                map: THREE.ImageUtils.loadTexture(prefix + faces[i] + type),
+                side: THREE.BackSide
+            }));
+        var cubeMapMaterial = new THREE.MeshFaceMaterial(cubeMaterialArray);
+        var cubeMap = new THREE.Mesh(cubeMapGeometry, cubeMapMaterial);
+        scene.add(cubeMap);
+        //set the scene background as out textured cube
+
+        //add horse model
+
+        var spaceHorse = new THREE.ImageUtils.loadTexture('images/cloud.png');
+        dirtTexture.wrapS = THREE.RepeatWrapping;
+        dirtTexture.wrapT = THREE.RepeatWrapping;
+        dirtTexture.repeat.set(15, 15);
+        var loader = new THREE.JSONLoader();
+        loader.load('models/horse.js', function (geometry) {
+            var mesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({
+                    map: spaceHorse
+                }
+            ));
+            mesh.receiveShadow = true;
+            mesh.castShadow = true;
+            mesh.position.set(-2500 + 50 + (11 * 100), 0, -2500 + 100 + (15 * 100));
+            mesh.scale.set(0.5,0.5,0.5);
+            scene.add(mesh);
+
+        });
+        //dynamic texture basically creates an html canvas element and populates relevent parameters finally mapping it as a teture
+        var dynamicTextureStart = new THREEx.DynamicTexture(512, 512)
+        dynamicTextureStart.context.font = "bolder 35px Verdana";
+        dynamicTextureStart.drawText("Welcome to Maze\n Run!", 32, 256, 'green')
+        var startScreenGeometry = new THREE.PlaneGeometry(20,20,1,1);
+        var startScreenMaterial = new THREE.MeshBasicMaterial({
+            map: dynamicTextureStart.texture,
+            side: THREE.DoubleSide
+        });
+
+        var startScreen = new THREE.Mesh(startScreenGeometry,startScreenMaterial);
+        startScreen.position.set(-180,40,152);
+        clickableMeshList.push(startScreen);
+        scene.add(startScreen);
+        //Just some variable initialization for collision detection
+        //collision for walls
+        collision.push(false);
+        //collision for death ball
+        collision.push(false);
+        lastDirection = "up";
+        rotatedFlag = false;
+        transformCoordinates = new THREE.Projector();
+        boulderRotate = 1;
+        boulderTranslate = 0;
     }
-	}
+
+    function init() {
+        //initialize scene
+        scene = new THREE.Scene();
+        splashScreen = 1;
+        //set up camera
+
+        // size according to window
+        var SCREEN_WIDTH = window.innerWidth;
+        var SCREEN_HEIGHT = window.innerHeight;
+        // camera attributes
+        var VIEW_ANGLE = 45;
+        var ASPECT = SCREEN_WIDTH / SCREEN_HEIGHT;
+        var NEAR = 0.1;
+        var FAR = 5000;
+        // set up camera
+        camera = new THREE.PerspectiveCamera(VIEW_ANGLE, ASPECT, NEAR, FAR);
+        var light;  // A light shining from the direction of the camera; moves with the camera.
+        light = new THREE.DirectionalLight("#336699");
+        light.position.set(0, 150, 400);
+        //add light to camera
+        light.shadowCameraVisible = true;
+        light.shadowDarkness = 0.95;
+        light.intensity = 2;
+        light.castShadow = true;
+        camera.add(light);
+        // add the camera to the scene
+        scene.add(camera);
+        // the camera defaults to position (0,0,0)
+        // 	so pull it back (z = 400) and up (y = 100) and set the angle towards the scene origin
+        camera.position.set(0, 150, 400);
+        camera.lookAt(scene.position);
 
 
-	//dirt stage
+        // initialize renderer use detector class to detect webgl compatibility if none use canvas renderer
+        if (Detector.webgl) {
+            renderer = new THREE.WebGLRenderer({antialias: true});
+        } else {
+            renderer = new THREE.CanvasRenderer();
+        }
+        //set size of viewport to render to
+        renderer.setSize(SCREEN_WIDTH, SCREEN_HEIGHT);
 
-	var dirtTexture = new THREE.ImageUtils.loadTexture( 'images/dirt-512.jpg' );
-	dirtTexture.wrapS = THREE.MirroredRepeatWrapping;
-	dirtTexture.wrapT = THREE.MirroredRepeatWrapping;
-	dirtTexture.repeat.set( 70, 70);
-	// render on both sides as we are on plane
-	var dirtMaterial = new THREE.MeshBasicMaterial( { map: dirtTexture, side: THREE.DoubleSide } );
-	var dirtGeometry = new THREE.PlaneGeometry(2500, 2500, 10, 10);
-	var dirt = new THREE.Mesh(dirtGeometry, dirtMaterial);
-	dirt.position.y = -1;
-	//rotate else vertical
-	dirt.position.x = -1250;
-	dirt.position.z = -1250;
-	dirt.rotation.x = Math.PI / 2;
-	scene.add(dirt);
+        container = document.getElementById('ThreeJS');
+        container.appendChild(renderer.domElement);
 
-	//cubemap
-
-	//path to image
-	var path = "images/dawnmountain-";
-	var type = '.png';
-	var location = [
-			path + 'xpos' + type,
-			path + 'xneg' + type,
-			path + 'ypos' + type,
-			path + 'yneg' + type,
-			path + 'zpos' + type,
-			path + 'zneg' + type
-		];
-
-	//create textured cube
-	var reflectionCube = new THREE.CubeTextureLoader().load( location );
-	//set the scene background as out textured cube
-	scene.background = reflectionCube;
+        // automatically resize renderer
+        THREEx.WindowResize(renderer, camera);
+        // toggle full-screen on given key press
+        THREEx.FullScreen.bindKey({charCode: 'm'.charCodeAt(0)});
 
 
-	 //Just some variable initialization for collision detection
-	 collision = false;
-	 lastDirection = "up";
-	 rotatedFlag = false
-}
+        //drag cursor to rotate, right click drag to pan and middle button to zoom
+        controls = new THREE.OrbitControls(camera, renderer.domElement);
 
-//animation loop function
-function animate()
-{
-  requestAnimationFrame( animate );
-	render();
-	update();
-}
+        //after setup run create world
+        createWorld();
 
-function update()
-{
-	// delta = change in time since last call (in seconds)
-	var delta = clock.getDelta(); // seconds.
-	var moveDistance = 75 * delta; // 110 pixels per second
-	var rotateAngle = Math.PI / 2 * delta;   // pi/2 radians (90 degrees) per second
-
-	// local transformations
-
-	if(!collision){
-
-	//prevPosition.getPositionFromMatrix(player.matrixWorld);
-
-        // rotate left or right
-    var rotation_matrix = new THREE.Matrix4().identity();
-    if ( keyboard.pressed("A") ) {
-        player.rotateOnAxis(new THREE.Vector3(0, 1, 0), rotateAngle);
-    }
-    if ( keyboard.pressed("D") ) {
-        player.rotateOnAxis(new THREE.Vector3(0, 1, 0), -rotateAngle);
+        // add listener for cursor click
+        document.addEventListener('mousedown', onClick);
     }
 
+    function onClick(mouseClick) {
+        //clip coords transform
+        pointerCoords.x = (mouseClick.clientX / window.innerWidth) * 2 - 1;
+        pointerCoords.y = (mouseClick.clientY / window.innerHeight) * 2 + 1;
+
+        // create a Ray with origin at the mouse position
+        //   and direction into the scene (camera direction)
+        var mousePos = new THREE.Vector3(pointerCoords.x, pointerCoords.y, 1);
+        transformCoordinates.unprojectVector(mousePos, camera);
+        var ray = new THREE.Raycaster(camera.position, mousePos.sub(camera.position).normalize());
+
+        // create an array containing all objects in the scene with which the ray intersects
+        var intersects = ray.intersectObjects(clickableMeshList);
+
+        // if there is one (or more) intersections
+        if (intersects.length > 0) {
+            var x = prompt("Enter something!", "Text");
+            alert(x);
+        }
+    }
+
+    //animation loop function
+    function animate() {
+        requestAnimationFrame(animate);
+        render();
+        update();
+    }
+
+    function collisionDetection(collidableList, mesh, index) {
+        //prompt("Enter something!", "Started Detection");
+        //collision detection
+        var originPoint = mesh.position.clone();
+
+        for (var vertexIndex = 0; vertexIndex < mesh.geometry.vertices.length; vertexIndex++) {
+            var localVertex = mesh.geometry.vertices[vertexIndex].clone();
+            var globalVertex = localVertex.applyMatrix4(mesh.matrix);
+            var directionVector = globalVertex.sub(mesh.position);//from center to center of shape
+
+            var ray = new THREE.Raycaster(originPoint, directionVector.clone().normalize(), 0, 75);//limit distance of travelled rays for optimization
+            var collisionResults = ray.intersectObjects(collidableList);
+            if (collisionResults.length > 0 && collisionResults[0].distance <= directionVector.length() + 2) {
+
+                collision[index] = true;
+                break;
+            }
+        }
+
+    }
 
 
-	if ( keyboard.pressed("left") ){
-		if(rotatedFlag){
-			player.rotation.x = 0;
-			player.rotation.z = 0;
-			rotatedFlag = false;
-		}
-		lastDirection = "left";
-		player.translateX( -moveDistance );
-	}
-	else if ( keyboard.pressed("right") ){
-		if(rotatedFlag){
-			player.rotation.x = 0;
-			player.rotation.z = 0;
-			rotatedFlag = false;
-		}
-		player.translateX(  moveDistance );
-		lastDirection = "right";
-	}
-	else if ( keyboard.pressed("W") ){
-		if(rotatedFlag){
-			player.rotation.x = 0;
-			player.rotation.z = 0;
-			rotatedFlag = false;
-		}
-		player.translateZ( -moveDistance );
-		lastDirection = "W";
-	}
-	else if ( keyboard.pressed("S") ){
-		if(rotatedFlag){
-			player.rotation.x = 0;
-			player.rotation.z = 0;
-			rotatedFlag =false;
-		}
-		player.translateZ(  moveDistance );
+    function update() {
 
-		lastDirection = "S";
-	}else if ( keyboard.pressed("up") ) {
-		player.rotateOnAxis(new THREE.Vector3(1, 0, 0), rotateAngle);
-		rotatedFlag = true;
-	}
-	else if ( keyboard.pressed("down") ) {
-		player.rotateOnAxis(new THREE.Vector3(1, 0, 0), -rotateAngle);
-		rotatedFlag = true
-	}
-	}else{
+        // local transformations
+        if(splashScreen == 1){
+          camera.position.set(-150,40,150);
+          camera.lookAt(player.position);
+          //camera.rotateOnAxis(new THREE.Vector3(0, 1, 0), Math.PI);
 
-		if ( lastDirection == "left" )
-            player.translateX(  moveDistance/1.2 );
-		if ( lastDirection == "right" )
-            player.translateX( -moveDistance/1.2 );
-	  if ( lastDirection == "W" )
-            player.translateZ( moveDistance/1.2 );
-		else if ( lastDirection == "S" )
-            player.translateZ( -moveDistance/1.2 );
+          var x = prompt("Enter something!", "I reached true");
+          if(x == "start")
+          //alert("Success");
+          splashScreen = 2;
 
-		 collision = false;
-	}
+        }else if (splashScreen == 2){
+          // delta = change in time since last call (in seconds)
+          var time = clock.getDelta(); // seconds.
+          var translate = 150 * time; // 110 pixels per second
+          var rotation = Math.PI / 2 * time;   // pi/2 radians (90 degrees) per second
+        if (!collision[0]) {
 
-	//third person positioning
-    var objectThirdPerson = new THREE.Vector3(0,0,45);
+            //prevPosition.getPositionFromMatrix(player.matrixWorld);
 
-	//third person in world coordinates from player and the shift
-    var worldThirdPerson = objectThirdPerson.applyMatrix4( player.matrixWorld );
+            // rotate left or right
+            var rotation_matrix = new THREE.Matrix4().identity();
+            if (keyboard.pressed("A")) {
+                player.rotateOnAxis(new THREE.Vector3(0, 1, 0), rotation);
+                timerBlock.rotateOnAxis(new THREE.Vector3(0, 1, 0), rotation);
+            }
+            if (keyboard.pressed("D")) {
+                player.rotateOnAxis(new THREE.Vector3(0, 1, 0), -rotation);
+                timerBlock.rotateOnAxis(new THREE.Vector3(0, 1, 0), -rotation);
+            }
 
 
-    camera.position.x = worldThirdPerson.x;
-    camera.position.y = worldThirdPerson.y;
-    camera.position.z = worldThirdPerson.z;
+            if (keyboard.pressed("left")) {
+                if (rotatedFlag) {
+                    player.rotation.x = 0;
+                    //player.rotation.z = 0;
+                    rotatedFlag = false;
+                }
+                lastDirection = "left";
+                player.translateX(-translate);
+            }
+            else if (keyboard.pressed("right")) {
+                if (rotatedFlag) {
+                    player.rotation.x = 0;
+                    //player.rotation.z = 0;
+                    rotatedFlag = false;
+                }
+                player.translateX(translate);
+                lastDirection = "right";
+            }
+            else if (keyboard.pressed("W")) {
+                if (rotatedFlag) {
+                    player.rotation.x = 0;
+                    //player.rotation.z = 0;
+                    rotatedFlag = false;
+                }
+                player.translateZ(-translate);
+                lastDirection = "W";
+            }
+            else if (keyboard.pressed("S")) {
+                if (rotatedFlag) {
+                    player.rotation.x = 0;
+                    //player.rotation.z = 0;
+                    rotatedFlag = false;
+                }
+                player.translateZ(translate);
+
+                lastDirection = "S";
+            } else if (keyboard.pressed("up")) {
+                player.rotateOnAxis(new THREE.Vector3(1, 0, 0), rotation);
+                rotatedFlag = true;
+            }
+            else if (keyboard.pressed("down")) {
+                player.rotateOnAxis(new THREE.Vector3(1, 0, 0), -rotation);
+                rotatedFlag = true
+            }
+        } else {
+            //prompt("Enter something!", "I reached true");
+            if (lastDirection == "left")
+                player.translateX(translate / 2);
+            if (lastDirection == "right")
+                player.translateX(-translate / 2);
+            if (lastDirection == "W")
+                player.translateZ(translate / 2);
+            else if (lastDirection == "S")
+                player.translateZ(-translate / 2);
+
+            collision[0] = false;
+        }
+
+        //third person positioning
+        var objectThirdPerson = new THREE.Vector3(0, 0, 45);
+
+        //third person in world coordinates from player and the shift
+        var worldThirdPerson = objectThirdPerson.applyMatrix4(player.matrixWorld);
 
 
+        camera.position.x = worldThirdPerson.x;
+        camera.position.y = worldThirdPerson.y;
+        camera.position.z = worldThirdPerson.z;
+
+        //third person positioning
+        var objectTimePerson = new THREE.Vector3(-30, 15, 0);
+
+        //third person in world coordinates from player and the shift
+        var worldTimePerson = objectTimePerson.applyMatrix4(player.matrixWorld);
 
 
-	// collision detection:
-	//   determines if any of the rays from the cube's origin to each vertex
-	//		intersects any face of a mesh in the array of target meshes
-	//   for increased collision accuracy, add more vertices to the cube;
-	//		for example, new THREE.CubeGeometry( 64, 64, 64, 8, 8, 8, wireMaterial )
-	//   HOWEVER: when the origin of the ray is within the target mesh, collisions do not occur
-	var originPoint = player.position.clone();
+        timerBlock.position.x = worldTimePerson.x;
+        timerBlock.position.y = worldTimePerson.y;
+        timerBlock.position.z = worldTimePerson.z;;
 
-	for (var vertexIndex = 0; vertexIndex < player.geometry.vertices.length; vertexIndex++)
-	{
-		var localVertex = player.geometry.vertices[vertexIndex].clone();
-		var globalVertex = localVertex.applyMatrix4( player.matrix );
-		var directionVector = globalVertex.sub( player.position );//from center to center of shape
+        //boulder.rotateOnAxis(new THREE.Vector3(0, 0, 1), rotation);
+        if (boulderTranslate >= 700) {
+            boulderRotate = boulderRotate * (-1);
+        } else if (boulderTranslate <= 0) {
+            boulderRotate = boulderRotate * (-1);
+        }
+        boulder.rotation.z += (-1 * (boulderRotate) * rotation);
+        boulder.position.x += boulderRotate * translate / 5;
+        boulderTranslate += boulderRotate * translate / 5;
 
-		var ray = new THREE.Raycaster( originPoint, directionVector.clone().normalize(), 0, 75 );
-		var collisionResults = ray.intersectObjects( collidableMeshList );
-		if ( collisionResults.length > 0 && collisionResults[0].distance <= directionVector.length()+2){
-			collision = true;
-			break;
-		}
-	}
+        timeText = Math.round((timeText-time)*100)/100;
 
-	controls.update();
-}
+        if(timeText < 0){
+          splashScreen = 3;
+        }
 
-function render()
-{
-    //place camera look at here because orbit controls over writes it
-    camera.lookAt( player.position );
-	renderer.render( scene, camera );
-}
+        var dynamicTexture1 = new THREEx.DynamicTexture(512, 512)
+        dynamicTexture1.context.font = "bolder 50px Verdana";
+        dynamicTexture1.drawText(timeText, 32, 256, 'red')
+        timerBlock.material.map = dynamicTexture1.texture;
+        timerBlock.material.map.needsUpdate = true;
+        timerBlock.material.needsUpdate = true;
+
+        collisionDetection(collidableMeshList, player, 0);
+        collisionDetection(deathArray, player, 1);
+        if(collision[1] == true){
+          splashScreen = 3;
+        }
+      }else{
+        alert("You lose!");
+        window.location.reload();
+      }
+        controls.update();
+    }
+
+    function render() {
+        //place camera look at here because orbit controls over writes it
+        camera.lookAt(player.position);
+        renderer.render(scene, camera);
+    }
 
 </script>
 
